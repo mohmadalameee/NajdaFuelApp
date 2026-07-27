@@ -13,22 +13,10 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Locate or extract project
-        id: locate
+      - name: Extract Project Zip
         run: |
           if [ -f "FuelDistributionApp.zip" ]; then
-            echo "وجدت ملف مضغوط - يتم فك الضغط..."
-            unzip -o FuelDistributionApp.zip -d extracted
-            echo "project_dir=extracted/FuelDistributionApp" >> "$GITHUB_OUTPUT"
-          elif [ -f "build.gradle" ] && [ -d "app" ]; then
-            echo "المشروع موجود بدون ضغط في جذر المستودع"
-            echo "project_dir=." >> "$GITHUB_OUTPUT"
-          elif [ -f "FuelDistributionApp/build.gradle" ]; then
-            echo "المشروع موجود داخل مجلد FuelDistributionApp"
-            echo "project_dir=FuelDistributionApp" >> "$GITHUB_OUTPUT"
-          else
-            echo "تعذر العثور على المشروع! تأكد من رفع FuelDistributionApp.zip أو محتويات المشروع في جذر المستودع."
-            exit 1
+            unzip -o FuelDistributionApp.zip
           fi
 
       - name: Set up JDK 17
@@ -37,21 +25,15 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: Set up Android SDK
-        uses: android-actions/setup-android@v3
+      - name: Grant execute permission for gradlew
+        run: chmod +x gradlew || true
 
-      - name: Set up Gradle
-        uses: gradle/actions/setup-gradle@v4
-        with:
-          gradle-version: '8.4'
+      - name: Build with Gradle
+        run: ./gradlew assembleDebug --no-daemon --stacktrace || gradle assembleDebug --stacktrace
 
-      - name: Build debug APK
-        working-directory: ${{ steps.locate.outputs.project_dir }}
-        run: gradle assembleDebug --stacktrace
-
-      - name: Upload APK as artifact
+      - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: FuelDistributionApp-debug-apk
-          path: ${{ steps.locate.outputs.project_dir }}/app/build/outputs/apk/debug/app-debug.apk
+          name: NajdaFuelApp-Debug
+          path: '**/build/outputs/apk/debug/*.apk'
           
