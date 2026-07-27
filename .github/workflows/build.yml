@@ -13,7 +13,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Extract Project Zip
+      - name: Extract Zip File
         run: |
           if [ -f "FuelDistributionApp.zip" ]; then
             unzip -o FuelDistributionApp.zip
@@ -25,15 +25,23 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: Grant execute permission for gradlew
-        run: chmod +x gradlew || true
+      - name: Grant execute permissions
+        run: |
+          find . -name "gradlew" -exec chmod +x {} \; || true
 
-      - name: Build with Gradle
-        run: ./gradlew assembleDebug --no-daemon --stacktrace || gradle assembleDebug --stacktrace
+      - name: Build Debug APK
+        run: |
+          if [ -f "gradlew" ]; then
+            ./gradlew assembleDebug --no-daemon
+          elif [ -f "FuelDistributionApp/gradlew" ]; then
+            cd FuelDistributionApp && ./gradlew assembleDebug --no-daemon
+          else
+            gradle assembleDebug
+          fi
 
-      - name: Upload APK Artifact
+      - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: NajdaFuelApp-Debug
+          name: NajdaFuelApp-APK
           path: '**/build/outputs/apk/debug/*.apk'
           
