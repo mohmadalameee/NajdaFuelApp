@@ -19,47 +19,34 @@ jobs:
             unzip -o FuelDistributionApp.zip
           fi
 
-      - name: 🔍 استعراض هيكل المجلدات (للتأكد من مكان الملفات)
-        run: |
-          echo "📂 محتويات المجلد الحالي:"
-          ls -la
-          echo "📂 البحث عن أي ملف build.gradle:"
-          find . -name "build.gradle" -type f
-
       - name: Set up JDK 17
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: 🛠️ تثبيت Gradle وتنفيذ البناء
+      - name: البحث عن مجلد المشروع
+        id: find_project
         run: |
-          # البحث عن gradlew
-          GRADLEW_PATH=$(find . -name "gradlew" -type f | head -n 1)
-
-          if [ -n "$GRADLEW_PATH" ]; then
-            echo "✅ تم العثور على gradlew في: $GRADLEW_PATH"
-            chmod +x "$GRADLEW_PATH"
-            cd "$(dirname "$GRADLEW_PATH")"
-            ./gradlew assembleDebug --no-daemon
-          else
-            echo "⚠️ لم نجد gradlew، سنستخدم Gradle المثبت عالمياً"
-            # تثبيت Gradle عبر apt (سريع جداً)
-            sudo apt-get update
-            sudo apt-get install gradle -y
-            
-            # البحث عن مجلد المشروع (الذي يحتوي على build.gradle)
-            PROJECT_DIR=$(find . -name "build.gradle" -type f | head -n 1 | xargs dirname)
-            if [ -z "$PROJECT_DIR" ]; then
-              echo "❌ لا يوجد ملف build.gradle! تأكد من محتوى الـ Zip."
-              exit 1
-            fi
-            echo "📁 المشروع موجود في: $PROJECT_DIR"
-            cd "$PROJECT_DIR"
-            gradle assembleDebug --no-daemon
+          PROJECT_DIR=$(find . -name "build.gradle" -type f | head -n 1 | xargs dirname)
+          if [ -z "$PROJECT_DIR" ]; then
+            echo "❌ لم يتم العثور على ملف build.gradle!"
+            exit 1
           fi
+          echo "dir=$PROJECT_DIR" >> $GITHUB_OUTPUT
+          echo "✅ تم العثور على المشروع في: $PROJECT_DIR"
 
-      - name: Upload APK
+      - name: تثبيت أحدث إصدار من Gradle
+        uses: gradle/actions/setup-gradle@v3
+        with:
+          gradle-version: '8.5'  # إصدار حديث ومستقر
+
+      - name: بناء ملف APK
+        run: |
+          cd ${{ steps.find_project.outputs.dir }}
+          gradle assembleDebug --no-daemon
+
+      - name: رفع ملف APK
         uses: actions/upload-artifact@v4
         with:
           name: NajdaFuelApp-APK
