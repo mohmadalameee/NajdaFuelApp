@@ -25,23 +25,20 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: Grant execute permissions
+      - name: Find and Build APK
         run: |
-          find . -name "gradlew" -exec chmod +x {} \; || true
-
-      - name: Build Debug APK
-        run: |
-          if [ -f "gradlew" ]; then
-            ./gradlew assembleDebug --no-daemon
-          elif [ -f "FuelDistributionApp/gradlew" ]; then
-            cd FuelDistributionApp && ./gradlew assembleDebug --no-daemon
-          else
-            gradle assembleDebug
+          # يبحث عن ملف gradlew في أي مجلد فرعي (حتى لو كان اسم المجلد مختلفاً)
+          GRADLEW_PATH=$(find . -name "gradlew" -type f | head -n 1)
+          if [ -z "$GRADLEW_PATH" ]; then
+            echo "❌ ملف gradlew غير موجود!"
+            exit 1
           fi
+          chmod +x "$GRADLEW_PATH"
+          cd "$(dirname "$GRADLEW_PATH")"
+          ./gradlew assembleDebug --no-daemon
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: NajdaFuelApp-APK
           path: '**/build/outputs/apk/debug/*.apk'
-          
